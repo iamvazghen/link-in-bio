@@ -381,11 +381,11 @@ button { font-family: inherit; }
 }
 .hero .eyebrow { margin-bottom: 0; }
 .hero-header { margin-bottom: calc(-1 * var(--space-1)); }
-.hero h1 { max-width: 600px; color: var(--current-fg); margin-top: var(--space-1); }
-.hero p { max-width: 500px; color: var(--current-muted); font-size: var(--text-lg); }
+.hero h1 { width: 100%; max-width: 600px; color: var(--current-fg); margin-top: var(--space-1); }
+.hero p { width: 100%; max-width: 500px; color: var(--current-muted); font-size: var(--text-lg); }
 /* Tighten the gap that follows the avatar so the portrait sits close to its name + intro */
 .hero .avatar-wrap { margin: var(--space-1) 0; }
-.bio-intro { color: var(--current-muted); font-size: var(--text-lg); max-width: 540px; margin: 0 auto; }
+.bio-intro { width: 100%; color: var(--current-muted); font-size: var(--text-lg); max-width: 540px; margin: 0 auto; }
 .hero-actions { margin-top: var(--space-2); }
 .bio-stats { display: flex; gap: var(--space-6); justify-content: center; margin-top: var(--space-5); }
 .stat-item { text-align: center; }
@@ -695,11 +695,16 @@ button { font-family: inherit; }
   .hero { padding-top: 120px; padding-bottom: 60px; }
   .links-grid { grid-template-columns: repeat(2, 1fr); gap: var(--space-4); }
   .link-card { grid-column: span 1 !important; grid-row: span 1 !important; }
+  /* Mobile/tablet perf: heavy backdrop blur over live WebGL + gradient causes jank.
+     Lighten the frosted-glass radius — still glassy, far cheaper to composite. */
+  .link-card { backdrop-filter: blur(16px) saturate(160%); -webkit-backdrop-filter: blur(16px) saturate(160%); }
+  .btn-glass, .filter-btn, .copy-email, .social-btn, .theme-toggle, .back-to-top { backdrop-filter: blur(14px) saturate(160%); -webkit-backdrop-filter: blur(14px) saturate(160%); }
 }
 @media (max-width: 640px) {
   :root { --section-y-desktop: 48px; --gutter: 16px; }
-  .hero { padding-top: 80px; padding-bottom: 40px; }
-  .hero h1 { font-size: var(--text-3xl); }
+  .hero { padding-top: 72px; padding-bottom: 40px; gap: var(--space-3); }
+  .hero h1 { font-size: clamp(32px, 9.5vw, 46px); line-height: 1.08; }
+  .bio-intro { font-size: var(--text-base); }
   .links-grid { grid-template-columns: 1fr; gap: var(--space-4); }
   .link-card { grid-column: span 1 !important; grid-row: span 1 !important; }
   .social-grid { gap: var(--space-3); }
@@ -1483,7 +1488,7 @@ button { font-family: inherit; }
     var isMobile = window.innerWidth < 760;
 
     try {
-      renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true, powerPreference: 'high-performance' });
+      renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: !isMobile, alpha: true, powerPreference: 'high-performance' });
     } catch (e) { return; }
     renderer.setClearColor(0x000000, 0); // transparent — the moving CSS gradient shows through
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, isMobile ? 1.5 : 1.75));
