@@ -744,15 +744,10 @@ button { font-family: inherit; }
 .qr-label { color: var(--current-muted); font-size: var(--text-sm); margin-bottom: var(--space-5); }
 .qr-card .btn-glass { width: 100%; }
 
-/* Skip-to-content link (a11y) — visible only on keyboard focus */
-.skip-link {
-  position: fixed; top: 10px; left: 10px; z-index: 500;
-  transform: translateY(-150%); transition: transform var(--motion-base) var(--ease-glass);
-  padding: var(--space-2) var(--space-4); border-radius: var(--radius-pill);
-  background: var(--current-accent); color: var(--current-accent-on);
-  font-family: var(--font-mono); font-size: var(--text-sm); box-shadow: var(--depth-md);
+/* Hide the "Press / to search" hint on touch devices (no physical keyboard) */
+@media (hover: none), (pointer: coarse), (max-width: 920px) {
+  .kbd-hint { display: none; }
 }
-.skip-link:focus-visible { transform: none; outline: 2px solid var(--current-fg); outline-offset: 2px; }
 
 /* Honor reduced-transparency / high-contrast: swap frosted glass for solid surfaces */
 @media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
@@ -807,7 +802,6 @@ button { font-family: inherit; }
 </style>
 </head>
 <body>
-<a href="#main" class="skip-link">Skip to content</a>
 <canvas id="webgl-hero" aria-hidden="true"></canvas>
 <div class="scroll-progress" id="scrollProgress" aria-hidden="true"></div>
 <div class="sprite-layer" id="sprites" aria-hidden="true"></div>
@@ -926,7 +920,7 @@ button { font-family: inherit; }
   </section>
 
   <footer class="footer">
-    <p>© <span id="year">2026</span> Advi Systems · Press <kbd>/</kbd> to search</p>
+    <p>© <span id="year">2026</span> Advi Systems<span class="kbd-hint"> · Press <kbd>/</kbd> to search</span></p>
   </footer>
 </main>
 
@@ -1077,10 +1071,12 @@ button { font-family: inherit; }
       var done = function (e) {
         if (e && e.propertyName !== 'max-height') return;
         el.style.maxHeight = 'none';
+        el.style.overflow = 'visible'; /* let card hover-glows spill past the container edges */
         el.removeEventListener('transitionend', done);
       };
       el.addEventListener('transitionend', done);
     } else {
+      el.style.overflow = 'hidden'; /* clip again before collapsing */
       el.style.maxHeight = el.scrollHeight + 'px';
       void el.offsetHeight; /* force reflow so the next change animates */
       el.classList.remove('open');
