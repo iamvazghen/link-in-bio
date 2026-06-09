@@ -185,7 +185,7 @@ body::before {
     radial-gradient(ellipse 80% 50% at 20% 50%, #2f6fd0 0%, transparent 50%),
     radial-gradient(ellipse 60% 80% at 80% 20%, #7fd1ff 0%, transparent 50%),
     radial-gradient(ellipse 70% 60% at 50% 80%, #3358e0 0%, transparent 50%);
-  opacity: 0.34;
+  opacity: 0;
   animation: gradient-drift 60s infinite ease-in-out;
   pointer-events: none;
   z-index: -3;
@@ -202,7 +202,7 @@ body::after {
     radial-gradient(circle at 10% 30%, #6aa8ff 0%, transparent 30%),
     radial-gradient(circle at 90% 70%, #4cc4ff 0%, transparent 30%),
     radial-gradient(circle at 30% 90%, #2b4fd0 0%, transparent 30%);
-  opacity: 0.28;
+  opacity: 0;
   animation: gradient-shift 45s infinite ease-in-out reverse;
   pointer-events: none;
   z-index: -2;
@@ -634,9 +634,7 @@ button { font-family: inherit; }
   background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 6px; padding: 2px 7px;
 }
 
-.cmdk-results { max-height: 46vh; overflow-y: auto; padding: var(--space-2); scrollbar-width: thin; scrollbar-color: var(--glass-border) transparent; }
-.cmdk-results::-webkit-scrollbar { width: 8px; }
-.cmdk-results::-webkit-scrollbar-thumb { background: var(--glass-border); border-radius: 8px; }
+.cmdk-results { max-height: 46vh; overflow-y: auto; padding: var(--space-2); scrollbar-width: thin; scrollbar-color: color-mix(in oklab, var(--current-accent), transparent 50%) transparent; }
 .cmdk-group-label {
   font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em;
   color: var(--current-muted); padding: var(--space-3) var(--space-4) var(--space-1);
@@ -797,13 +795,90 @@ button { font-family: inherit; }
 
 /* WebGL hero backdrop (progressive enhancement; CSS gradients are the fallback) */
 #webgl-hero {
-  position: fixed; inset: 0; width: 100%; height: 100%;
+  position: fixed; inset: 0; 
+  width: calc(100% + 50px); height: calc(100% + 50px);
+  margin-left: -25px; margin-top: -25px;
   z-index: -1; display: block; pointer-events: none;
   opacity: 0; transition: opacity 1.2s var(--ease-glass);
 }
 #webgl-hero.ready { opacity: 1; }
 /* The transparent glass canvas floats OVER the moving gradient — keep both painting */
 @media print { #webgl-hero { display: none; } }
+
+  /* ---------- Completely Transparent Scrollbar ---------- */
+  ::-webkit-scrollbar { 
+    width: 12px; 
+    height: 12px; 
+  }
+  ::-webkit-scrollbar-track { 
+    background: transparent !important;
+    border: none !important;
+  }
+  ::-webkit-scrollbar-thumb { 
+    background: linear-gradient(135deg, 
+      color-mix(in oklab, var(--current-accent), transparent 75%), 
+      color-mix(in oklab, var(--current-accent), transparent 92%)
+    ) !important;
+    border: 1px solid color-mix(in oklab, var(--current-accent), transparent 55%) !important;
+    border-radius: 12px;
+    box-shadow: 
+      inset 0 1px 0 rgba(255, 255, 255, 0.25),
+      0 2px 8px rgba(0, 0, 0, 0.12),
+      inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(12px) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(12px) saturate(180%) !important;
+    transition: all 0.3s var(--ease);
+  }
+  ::-webkit-scrollbar-thumb:hover { 
+    background: linear-gradient(135deg, 
+      color-mix(in oklab, var(--current-accent), transparent 65%), 
+      color-mix(in oklab, var(--current-accent), transparent 85%)
+    ) !important;
+    border-color: color-mix(in oklab, var(--current-accent), transparent 40%) !important;
+    opacity: 1;
+  }
+  ::-webkit-scrollbar-corner { 
+    background: transparent !important; 
+    border: none !important;
+  }
+  ::-webkit-scrollbar-button { 
+    display: none !important; 
+  }
+  ::-webkit-scrollbar-track-piece { 
+    display: none !important; 
+  }
+
+  /* Transparent scrollbar for cmdk component */
+  .cmdk-results::-webkit-scrollbar { 
+    width: 8px; 
+  }
+  .cmdk-results::-webkit-scrollbar-track { 
+    background: transparent !important;
+    border: none !important;
+  }
+  .cmdk-results::-webkit-scrollbar-thumb { 
+    background: linear-gradient(135deg, 
+      color-mix(in oklab, var(--current-accent), transparent 75%), 
+      color-mix(in oklab, var(--current-accent), transparent 92%)
+    ) !important;
+    border: 1px solid color-mix(in oklab, var(--current-accent), transparent 55%) !important;
+    border-radius: 8px;
+    backdrop-filter: blur(8px) saturate(160%) !important;
+    -webkit-backdrop-filter: blur(8px) saturate(160%) !important;
+  }
+  .cmdk-results::-webkit-scrollbar-thumb:hover { 
+    background: linear-gradient(135deg, 
+      color-mix(in oklab, var(--current-accent), transparent 65%), 
+      color-mix(in oklab, var(--current-accent), transparent 85%)
+    ) !important;
+    opacity: 1;
+  }
+
+  /* Media query for mobile devices */
+  @media (max-width: 768px) {
+    ::-webkit-scrollbar { width: 10px; height: 10px; }
+    .cmdk-results::-webkit-scrollbar { width: 6px; }
+  }
 </style>
 </head>
 <body>
@@ -1058,12 +1133,54 @@ button { font-family: inherit; }
     var sysDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     var theme = stored || (sysDark ? 'dark' : 'light');
     document.documentElement.setAttribute('data-theme', theme);
+    
+    // Update toggle icon immediately based on current theme
     if (toggle) {
+      var isDark = theme === 'dark';
+      toggle.querySelector('.sun').style.opacity = isDark ? '0' : '1';
+      toggle.querySelector('.sun').style.transform = isDark ? 'rotate(90deg) scale(0)' : 'rotate(0) scale(1)';
+      toggle.querySelector('.moon').style.opacity = isDark ? '1' : '0';
+      toggle.querySelector('.moon').style.transform = isDark ? 'rotate(0) scale(1)' : 'rotate(-90deg) scale(0)';
+      
       toggle.addEventListener('click', function () {
         var next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
         document.documentElement.setAttribute('data-theme', next);
         try { localStorage.setItem('theme', next); } catch (_) {}
+        
+        // Trigger background animation restart
+        triggerBackgroundAnimation();
       });
+
+      // Listen for system theme changes
+      window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function(e) {
+        if (!localStorage.getItem('theme')) { // Only if user hasn't manually set a theme
+          var newTheme = e.matches ? 'dark' : 'light';
+          document.documentElement.setAttribute('data-theme', newTheme);
+
+          // Update toggle icon
+          var isDark = newTheme === 'dark';
+          toggle.querySelector('.sun').style.opacity = isDark ? '0' : '1';
+          toggle.querySelector('.sun').style.transform = isDark ? 'rotate(90deg) scale(0)' : 'rotate(0) scale(1)';
+          toggle.querySelector('.moon').style.opacity = isDark ? '1' : '0';
+          toggle.querySelector('.moon').style.transform = isDark ? 'rotate(0) scale(1)' : 'rotate(-90deg) scale(0)';
+
+          // Trigger background animation restart
+          triggerBackgroundAnimation();
+        }
+      });
+    }
+  }
+
+  /* Trigger background animation restart */
+  function triggerBackgroundAnimation() {
+    // Force restart the background animation
+    var canvas = document.getElementById('webgl-hero');
+    if (canvas && canvas.classList.contains('ready')) {
+      // Add a brief flash to indicate theme change
+      canvas.style.opacity = '0';
+      setTimeout(function() {
+        canvas.style.opacity = '1';
+      }, 100);
     }
   }
 
@@ -1492,83 +1609,195 @@ button { font-family: inherit; }
     } catch (e) { return; }
     renderer.setClearColor(0x000000, 0); // transparent — the moving CSS gradient shows through
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, isMobile ? 1.5 : 1.75));
-    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setSize(window.innerWidth + 50, window.innerHeight + 50);
 
     scene = new THREE.Scene(); // no background / no fog: clear glass over the live gradient
 
     camera = new THREE.PerspectiveCamera(52, window.innerWidth / window.innerHeight, 0.1, 100);
     camera.position.set(0, 0, 17);
 
-    // Neutral white lighting keeps the glass colourless; it just catches crisp edge glints
-    scene.add(new THREE.AmbientLight(0xffffff, 0.75));
-    var key = new THREE.DirectionalLight(0xffffff, 1.7); key.position.set(6, 9, 12); scene.add(key);
-    var fill = new THREE.PointLight(0xffffff, 0.8, 80); fill.position.set(-12, 7, 9); scene.add(fill);
-    var rim = new THREE.PointLight(0xdfeaff, 0.7, 80); rim.position.set(11, -8, 8); scene.add(rim);
+    // Multi-angle realistic lighting setup to catch crystal-clear bevels and colored reflections
+    scene.add(new THREE.AmbientLight(0xffffff, 0.45)); // Soft ambient base
+    
+    // High-intensity white key light for sharp, clean specular highlights on glass edges
+    var keyLight = new THREE.DirectionalLight(0xffffff, 2.5);
+    keyLight.position.set(8, 12, 10);
+    scene.add(keyLight);
 
-    // Shards are triangles — small slivers + large panes, plus a few 3D tetra shards
-    function shardGeometries() {
-      function thinTri(a, b, c, depth) {
-        var s = new THREE.Shape();
-        s.moveTo(a[0], a[1]); s.lineTo(b[0], b[1]); s.lineTo(c[0], c[1]); s.closePath();
-        var g = new THREE.ExtrudeGeometry(s, { depth: depth, bevelEnabled: true, bevelThickness: 0.04, bevelSize: 0.05, bevelSegments: 1 });
-        g.center(); return g;
-      }
-      function flatTri(a, b, c) {
-        var g = new THREE.BufferGeometry();
-        g.setAttribute('position', new THREE.Float32BufferAttribute([a[0], a[1], 0, b[0], b[1], 0, c[0], c[1], 0], 3));
-        g.computeVertexNormals(); return g;
-      }
-      return [
-        thinTri([0, 1.15], [0.95, -0.7], [-0.85, -0.55], 0.08),   // chunky shard
-        thinTri([-0.1, 1.3], [0.55, -1.05], [-0.45, -0.8], 0.06), // narrow shard
-        new THREE.TetrahedronGeometry(1, 0),                      // 3D triangular shard
-        flatTri([0, 1.2], [1.0, -0.6], [-0.9, -0.5]),            // flat triangle pane
-        flatTri([-0.25, 1.25], [0.7, -1.0], [-0.55, -0.65])      // flat sliver
-      ];
-    }
-    var geos = shardGeometries();
+    // Cool blue-tinted fill light from the opposite side
+    var coolLight = new THREE.PointLight(0xdbeafe, 2.0, 100);
+    coolLight.position.set(-14, 8, 9);
+    scene.add(coolLight);
 
-    group = new THREE.Group(); scene.add(group);
+    // Warm pink-purple accent light to add luxurious glass reflection tones
+    var warmLight = new THREE.PointLight(0xf5d0fe, 1.8, 100);
+    warmLight.position.set(12, -10, 8);
+    scene.add(warmLight);
 
-    var COUNT = isMobile ? 9 : 18;
+    // Deep sapphire fill light from below
+    var deepLight = new THREE.PointLight(0x60a5fa, 1.2, 80);
+    deepLight.position.set(-5, -12, -5);
+    scene.add(deepLight);
+
+    group = new THREE.Group();
+    scene.add(group);
+
+    // Quantity of shards (optimized for performance per device)
+    var COUNT = isMobile ? 16 : 32;
     var shards = [];
-    for (var i = 0; i < COUNT; i++) {
-      var mat = new THREE.MeshPhysicalMaterial({
-        color: 0xffffff,
-        metalness: 0,
-        roughness: 0.04 + Math.random() * 0.08,
-        transparent: true,
-        opacity: 0.14 + Math.random() * 0.14, // clear, colourless glass
-        ior: 1.45,
-        reflectivity: 0.5,
-        clearcoat: 1,
-        clearcoatRoughness: 0.03,
-        side: THREE.DoubleSide,
-        flatShading: true,
-        depthWrite: false
+
+    // Helper to generate unique irregular glass geometries procedurally
+    function generateShardGeometry() {
+      var rand = Math.random();
+      
+      // 15% chance to create a chunky 3D crystal shard (tetrahedron or octahedron)
+      if (rand < 0.08) {
+        return new THREE.TetrahedronGeometry(0.5 + Math.random() * 0.4, 0);
+      } else if (rand < 0.15) {
+        return new THREE.OctahedronGeometry(0.4 + Math.random() * 0.4, 0);
+      }
+      
+      // 85% chance to create a realistic extruded irregular glass polygon (3 to 5 sides)
+      var shape = new THREE.Shape();
+      var numSides = 3 + Math.floor(Math.random() * 3); // 3, 4, or 5 sides
+      var points = [];
+      var angleStep = (Math.PI * 2) / numSides;
+      
+      // Randomize the aspect ratio/elongation of each individual shard
+      var aspectX = 0.6 + Math.random() * 0.8;
+      var aspectY = 0.6 + Math.random() * 0.8;
+      var rMax = 0.5 + Math.random() * 0.7;
+
+      for (var j = 0; j < numSides; j++) {
+        var angle = j * angleStep + (Math.random() - 0.5) * angleStep * 0.45;
+        var r = 0.3 + Math.random() * rMax;
+        points.push(new THREE.Vector2(Math.cos(angle) * r * aspectX, Math.sin(angle) * r * aspectY));
+      }
+
+      shape.moveTo(points[0].x, points[0].y);
+      for (var j = 1; j < points.length; j++) {
+        shape.lineTo(points[j].x, points[j].y);
+      }
+      shape.closePath();
+
+      // Glass shards have very thin extrusions and sharp bevels
+      var depth = 0.03 + Math.random() * 0.06;
+      var bevelThickness = 0.015 + Math.random() * 0.02;
+      var bevelSize = 0.01 + Math.random() * 0.015;
+
+      var geo = new THREE.ExtrudeGeometry(shape, {
+        depth: depth,
+        bevelEnabled: true,
+        bevelThickness: bevelThickness,
+        bevelSize: bevelSize,
+        bevelSegments: 2,
+        curveSegments: 8
       });
-      var mesh = new THREE.Mesh(geos[i % geos.length], mat);
-      // bimodal sizing: a mix of small and large triangles, like real shattered glass
-      var sc = Math.random() < 0.5 ? (0.3 + Math.random() * 0.6) : (1.5 + Math.random() * 1.5);
+      geo.center();
+      return geo;
+    }
+
+    for (var i = 0; i < COUNT; i++) {
+      var geo = generateShardGeometry();
+      
+      var mat;
+      if (isMobile) {
+        // High-performance mobile physical material using standard transparency
+        mat = new THREE.MeshPhysicalMaterial({
+          color: 0xffffff,
+          metalness: 0.0,
+          roughness: 0.04 + Math.random() * 0.06,
+          transparent: true,
+          opacity: 0.16 + Math.random() * 0.12,
+          ior: 1.5,
+          reflectivity: 0.6,
+          clearcoat: 0.8,
+          clearcoatRoughness: 0.04,
+          side: THREE.DoubleSide,
+          depthWrite: false
+        });
+      } else {
+        // Ultra-premium physical glass with refraction, transmission volume, and subtle iridescence
+        var usePurpleTint = Math.random() < 0.4;
+        mat = new THREE.MeshPhysicalMaterial({
+          color: 0xffffff,
+          metalness: 0.0,
+          roughness: 0.01 + Math.random() * 0.03, // Highly polished
+          transparent: true,
+          opacity: 0.18 + Math.random() * 0.14, // Alpha blending with CSS background gradient
+          transmission: 0.35 + Math.random() * 0.35, // Refraction of other shards behind inside WebGL
+          thickness: 0.15 + Math.random() * 0.25, // Glass volume thickness for ray-bending
+          ior: 1.52, // Accurate glass index of refraction
+          reflectivity: 0.9,
+          clearcoat: 1.0,
+          clearcoatRoughness: 0.01,
+          side: THREE.DoubleSide,
+          depthWrite: false,
+          attenuationColor: new THREE.Color(usePurpleTint ? 0xf5e3ff : 0xe0f7fa), // Light violet or pale cyan edge-tinting
+          attenuationDistance: 0.7 + Math.random() * 0.7,
+          iridescence: 0.05 + Math.random() * 0.15, // Realistic tempered-glass sheen
+          iridescenceIOR: 1.35,
+          iridescenceThicknessRange: [100, 350]
+        });
+      }
+
+      var mesh = new THREE.Mesh(geo, mat);
+
+      // Trimodal realistic size distribution (crumbs, medium pieces, large planes)
+      var sizeRoll = Math.random();
+      var sc;
+      if (sizeRoll < 0.25) {
+        // Small shards & crumbs
+        sc = 0.25 + Math.random() * 0.3;
+      } else if (sizeRoll < 0.8) {
+        // Medium organic fragments
+        sc = 0.65 + Math.random() * 0.65;
+      } else {
+        // Large glass panes
+        sc = 1.4 + Math.random() * 1.3;
+      }
       mesh.scale.setScalar(sc);
-      mesh.position.set((Math.random() - 0.5) * 24, (Math.random() - 0.5) * 15, (Math.random() - 0.5) * 12 - 3);
-      mesh.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
+
+      // Wide spatial distribution for deep parallax effect
+      mesh.position.set(
+        (Math.random() - 0.5) * 26,
+        (Math.random() - 0.5) * 16,
+        (Math.random() - 0.5) * 12 - 3
+      );
+      mesh.rotation.set(
+        Math.random() * Math.PI,
+        Math.random() * Math.PI,
+        Math.random() * Math.PI
+      );
+
       mesh.userData = {
-        rx: (Math.random() - 0.5) * 0.005, ry: (Math.random() - 0.5) * 0.006, rz: (Math.random() - 0.5) * 0.004,
-        fx: 0.0005 + Math.random() * 0.0008, fy: 0.0004 + Math.random() * 0.0008,
-        px: Math.random() * Math.PI * 2, py: Math.random() * Math.PI * 2,
-        ax: 0.25 + Math.random() * 0.7, ay: 0.25 + Math.random() * 0.7,
-        ps: Math.random() * Math.PI * 2, base: sc,
-        ox: mesh.position.x, oy: mesh.position.y, oz: mesh.position.z,
-        sx: (Math.random() - 0.5) * 34, sy: (Math.random() - 0.5) * 24, sz: (Math.random() - 0.5) * 20
+        rx: (Math.random() - 0.5) * 0.004,
+        ry: (Math.random() - 0.5) * 0.005,
+        rz: (Math.random() - 0.5) * 0.003,
+        fx: 0.0004 + Math.random() * 0.0007,
+        fy: 0.0003 + Math.random() * 0.0007,
+        px: Math.random() * Math.PI * 2,
+        py: Math.random() * Math.PI * 2,
+        ax: 0.2 + Math.random() * 0.6,
+        ay: 0.2 + Math.random() * 0.6,
+        ps: Math.random() * Math.PI * 2,
+        base: sc,
+        ox: mesh.position.x,
+        oy: mesh.position.y,
+        oz: mesh.position.z,
+        sx: (Math.random() - 0.5) * 36,
+        sy: (Math.random() - 0.5) * 26,
+        sz: (Math.random() - 0.5) * 20
       };
-      group.add(mesh); shards.push(mesh);
+
+      group.add(mesh);
+      shards.push(mesh);
     }
 
     window.addEventListener('resize', function () {
       camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
-      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setSize(window.innerWidth + 50, window.innerHeight + 50);
     }, { passive: true });
 
     window.addEventListener('pointermove', function (e) {
@@ -1576,9 +1805,7 @@ button { font-family: inherit; }
       pointer.ty = (e.clientY / window.innerHeight - 0.5);
     }, { passive: true });
 
-    // Theme colour lives in the CSS gradient behind the transparent canvas — nothing to recolor here
-
-    // Pause the render loop when the hero scrolls away or the tab is hidden
+    // Pause rendering loop when hero is off-screen
     var hero = document.querySelector('.hero');
     if ('IntersectionObserver' in window && hero) {
       new IntersectionObserver(function (en) {
@@ -1593,24 +1820,28 @@ button { font-family: inherit; }
 
     function frame() {
       t += 1;
-      if (intro < 1) intro = Math.min(1, intro + 1 / 80); // ~1.3s assemble
+      if (intro < 1) intro = Math.min(1, intro + 1 / 90); // ~1.5s assemble
       var e = 1 - Math.pow(1 - intro, 3); // easeOutCubic
-      autoY += 0.0009;
-      pointer.x += (pointer.tx - pointer.x) * 0.045;
-      pointer.y += (pointer.ty - pointer.y) * 0.045;
-      group.rotation.y = autoY + pointer.x * 0.45;
-      group.rotation.x = Math.sin(t * 0.0008) * 0.08 + pointer.y * 0.28;
-      group.rotation.z = (1 - e) * 0.4; // unwinds as the shards settle into place
+      autoY += 0.0007;
+      pointer.x += (pointer.tx - pointer.x) * 0.04;
+      pointer.y += (pointer.ty - pointer.y) * 0.04;
+      group.rotation.y = autoY + pointer.x * 0.42;
+      group.rotation.x = Math.sin(t * 0.0007) * 0.08 + pointer.y * 0.26;
+      group.rotation.z = (1 - e) * 0.4;
+      
       for (var i = 0; i < shards.length; i++) {
         var b = shards[i], u = b.userData;
-        b.rotation.x += u.rx; b.rotation.y += u.ry; b.rotation.z += u.rz;
+        b.rotation.x += u.rx;
+        b.rotation.y += u.ry;
+        b.rotation.z += u.rz;
         b.position.x = u.ox + Math.sin(t * u.fx + u.px) * u.ax + u.sx * (1 - e);
         b.position.y = u.oy + Math.cos(t * u.fy + u.py) * u.ay + u.sy * (1 - e);
         b.position.z = u.oz + u.sz * (1 - e);
-        b.scale.setScalar(u.base * (0.35 + 0.65 * e) * (1 + Math.sin(t * 0.012 + u.ps) * 0.05));
+        b.scale.setScalar(u.base * (0.35 + 0.65 * e) * (1 + Math.sin(t * 0.01 + u.ps) * 0.045));
       }
       renderer.render(scene, camera);
     }
+
     function loop() {
       cancelAnimationFrame(raf);
       if (!running || !visible) return;
