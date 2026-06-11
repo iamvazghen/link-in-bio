@@ -96,7 +96,6 @@
       var bg = theme === 'dark' ? '#0a1733' : '#d7ecff';
       document.documentElement.style.backgroundColor = bg;
       document.documentElement.style.colorScheme = theme;
-      if (document.body) document.body.style.backgroundColor = bg;
       document.querySelectorAll('meta[name="theme-color"]').forEach(function (meta) {
         meta.setAttribute('content', bg);
       });

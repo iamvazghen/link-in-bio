@@ -155,7 +155,10 @@ body {
   min-height: 100vh;
   overflow-x: hidden;
   position: relative;
+  isolation: isolate;
 }
+
+#main { position: relative; z-index: 2; }
 
 /* Layer 1: Slow-moving organic gradient waves */
 body::before {
@@ -169,7 +172,7 @@ body::before {
   opacity: 0;
   animation: gradient-drift 60s infinite ease-in-out;
   pointer-events: none;
-  z-index: -3;
+  z-index: 0;
   will-change: transform;
   transform-origin: center;
 }
@@ -186,7 +189,7 @@ body::after {
   opacity: 0;
   animation: gradient-shift 45s infinite ease-in-out reverse;
   pointer-events: none;
-  z-index: -2;
+  z-index: 0;
   will-change: transform;
   transform-origin: center;
 }
@@ -196,7 +199,7 @@ body::after {
   position: fixed;
   top: 0; left: 0; width: 100%; height: 100%;
   pointer-events: none;
-  z-index: -1;
+  z-index: 1;
   overflow: hidden;
   will-change: transform;
 }
@@ -779,7 +782,7 @@ button { font-family: inherit; }
   position: fixed; inset: 0; 
   width: calc(100% + 50px); height: calc(100% + 50px);
   margin-left: -25px; margin-top: -25px;
-  z-index: -1; display: block; pointer-events: none;
+  z-index: 1; display: block; pointer-events: none;
   opacity: 0; transition: opacity 1.2s var(--ease-glass);
 }
 #webgl-hero.ready { opacity: 1; }
