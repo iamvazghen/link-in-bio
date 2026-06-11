@@ -29,9 +29,11 @@
   if (!webglOK()) return;
 
   import('three').then(function (THREE) {
-    var renderer, scene, camera, group, raf, running = true, visible = true, t = 0, autoY = 0, intro = 0;
+    var renderer, scene, camera, group, raf, envRT, ambientLight, keyLight, coolLight, warmLight, deepLight;
+    var running = true, visible = true, t = 0, autoY = 0, intro = 0;
     var pointer = { x: 0, y: 0, tx: 0, ty: 0 };
     var isMobile = window.innerWidth < 760;
+    var currentTheme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
 
     try {
       renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: !isMobile, alpha: true, powerPreference: 'high-performance' });
@@ -49,21 +51,49 @@
     camera = new THREE.PerspectiveCamera(52, window.innerWidth / window.innerHeight, 0.1, 100);
     camera.position.set(0, 0, 17);
 
+    var PALETTES = {
+      light: {
+        stops: ['#f4f9ff', '#cfe4ff', '#5b86c9', '#16264a'],
+        blobs: ['#ffffff', '#eaf3ff', '#bf9bff', '#7fd1ff'],
+        ambient: { color: 0xffffff, intensity: 0.25 },
+        key: { color: 0xffffff, intensity: 2.0 },
+        cool: { color: 0xdbeafe, intensity: 1.6 },
+        warm: { color: 0xf5d0fe, intensity: 1.3 },
+        deep: { color: 0x60a5fa, intensity: 1.0 },
+        exposure: 1.05,
+        envMapIntensity: isMobile ? 1.2 : 1.35,
+        tints: [0xbfe9ff, 0xa9dcff, 0xd7e9ff, 0xc9e8ec, 0xe3d8ff]
+      },
+      dark: {
+        stops: ['#dce8ff', '#7fb2ff', '#24426f', '#061026'],
+        blobs: ['#f4f9ff', '#93c5fd', '#5b9bff', '#c4b5fd'],
+        ambient: { color: 0xb7d4ff, intensity: 0.18 },
+        key: { color: 0xdce8ff, intensity: 1.45 },
+        cool: { color: 0x5b9bff, intensity: 1.4 },
+        warm: { color: 0xa78bfa, intensity: 0.95 },
+        deep: { color: 0x2563eb, intensity: 1.25 },
+        exposure: 0.82,
+        envMapIntensity: isMobile ? 0.95 : 1.1,
+        tints: [0x7fb2ff, 0x5b9bff, 0xaebfdd, 0x93c5fd, 0xc4b5fd]
+      }
+    };
+
     /* ---------- Procedural environment (drives reflections + refraction) ----------
        A soft equirectangular gradient with a couple of bright "window" blobs.
        Glass needs something to reflect; this is what makes the shards sparkle and
        refract instead of looking like flat tinted plastic. */
-    function buildEnvironment() {
+    function buildEnvironment(theme) {
+      var palette = PALETTES[theme] || PALETTES.light;
       var c = document.createElement('canvas');
       c.width = 512; c.height = 256;
       var x = c.getContext('2d');
 
       // Vertical sky→deep gradient in the page's blue family.
       var g = x.createLinearGradient(0, 0, 0, c.height);
-      g.addColorStop(0.00, '#f4f9ff');
-      g.addColorStop(0.35, '#cfe4ff');
-      g.addColorStop(0.70, '#5b86c9');
-      g.addColorStop(1.00, '#16264a');
+      g.addColorStop(0.00, palette.stops[0]);
+      g.addColorStop(0.35, palette.stops[1]);
+      g.addColorStop(0.70, palette.stops[2]);
+      g.addColorStop(1.00, palette.stops[3]);
       x.fillStyle = g;
       x.fillRect(0, 0, c.width, c.height);
 
@@ -76,10 +106,10 @@
         x.beginPath(); x.arc(cx, cy, r, 0, Math.PI * 2); x.fill();
         x.globalAlpha = 1;
       }
-      blob(130, 60, 120, '#ffffff', 0.9);   // key window
-      blob(400, 50, 90, '#eaf3ff', 0.7);    // secondary
-      blob(300, 150, 140, '#bf9bff', 0.22); // faint violet bounce
-      blob(60, 200, 110, '#7fd1ff', 0.20);  // cool fill
+      blob(130, 60, 120, palette.blobs[0], 0.9);   // key window
+      blob(400, 50, 90, palette.blobs[1], 0.7);    // secondary
+      blob(300, 150, 140, palette.blobs[2], 0.22); // faint violet bounce
+      blob(60, 200, 110, palette.blobs[3], 0.20);  // cool fill
 
       var tex = new THREE.Texture(c);
       tex.mapping = THREE.EquirectangularReflectionMapping;
@@ -88,29 +118,32 @@
 
       var pmrem = new THREE.PMREMGenerator(renderer);
       pmrem.compileEquirectangularShader();
-      var envRT = pmrem.fromEquirectangular(tex);
+      var nextEnvRT = pmrem.fromEquirectangular(tex);
+      if (envRT) envRT.dispose();
+      envRT = nextEnvRT;
       scene.environment = envRT.texture;
       tex.dispose();
       pmrem.dispose();
     }
-    buildEnvironment();
+    buildEnvironment(currentTheme);
 
     /* ---------- Lighting: env handles ambient/reflections; these add punch ---------- */
-    scene.add(new THREE.AmbientLight(0xffffff, 0.25));
+    ambientLight = new THREE.AmbientLight(0xffffff, 0.25);
+    scene.add(ambientLight);
 
-    var keyLight = new THREE.DirectionalLight(0xffffff, 2.0); // sharp white edge speculars
+    keyLight = new THREE.DirectionalLight(0xffffff, 2.0); // sharp white edge speculars
     keyLight.position.set(8, 12, 10);
     scene.add(keyLight);
 
-    var coolLight = new THREE.PointLight(0xdbeafe, 1.6, 100); // cool blue fill
+    coolLight = new THREE.PointLight(0xdbeafe, 1.6, 100); // cool blue fill
     coolLight.position.set(-14, 8, 9);
     scene.add(coolLight);
 
-    var warmLight = new THREE.PointLight(0xf5d0fe, 1.3, 100); // soft violet accent
+    warmLight = new THREE.PointLight(0xf5d0fe, 1.3, 100); // soft violet accent
     warmLight.position.set(12, -10, 8);
     scene.add(warmLight);
 
-    var deepLight = new THREE.PointLight(0x60a5fa, 1.0, 80);  // sapphire from below
+    deepLight = new THREE.PointLight(0x60a5fa, 1.0, 80);  // sapphire from below
     deepLight.position.set(-5, -12, -5);
     scene.add(deepLight);
 
@@ -167,12 +200,10 @@
       return geo;
     }
 
-    // Cool-glass tint family for subtle, varied edge colouring.
-    var TINTS = [0xbfe9ff, 0xa9dcff, 0xd7e9ff, 0xc9e8ec, 0xe3d8ff];
-
     for (var i = 0; i < COUNT; i++) {
       var geo = makeShardGeometry();
-      var tint = TINTS[(Math.random() * TINTS.length) | 0];
+      var tintIndex = (Math.random() * PALETTES.light.tints.length) | 0;
+      var tint = PALETTES[currentTheme].tints[tintIndex];
 
       var mat;
       if (isMobile) {
@@ -248,6 +279,7 @@
         ax: 0.2 + Math.random() * 0.6,
         ay: 0.2 + Math.random() * 0.6,
         ps: Math.random() * Math.PI * 2,
+        tintIndex: tintIndex,
         base: sc,
         ox: mesh.position.x,
         oy: mesh.position.y,
@@ -260,6 +292,39 @@
       group.add(mesh);
       shards.push(mesh);
     }
+
+    function applyTheme(theme) {
+      var palette = PALETTES[theme] || PALETTES.light;
+      currentTheme = theme;
+      renderer.toneMappingExposure = palette.exposure;
+      buildEnvironment(currentTheme);
+
+      ambientLight.color.setHex(palette.ambient.color);
+      ambientLight.intensity = palette.ambient.intensity;
+      keyLight.color.setHex(palette.key.color);
+      keyLight.intensity = palette.key.intensity;
+      coolLight.color.setHex(palette.cool.color);
+      coolLight.intensity = palette.cool.intensity;
+      warmLight.color.setHex(palette.warm.color);
+      warmLight.intensity = palette.warm.intensity;
+      deepLight.color.setHex(palette.deep.color);
+      deepLight.intensity = palette.deep.intensity;
+
+      for (var j = 0; j < shards.length; j++) {
+        var mat = shards[j].material;
+        mat.envMapIntensity = palette.envMapIntensity;
+        mat.attenuationColor.setHex(palette.tints[shards[j].userData.tintIndex]);
+        mat.needsUpdate = true;
+      }
+      frame();
+    }
+
+    applyTheme(currentTheme);
+
+    window.addEventListener('bio:themechange', function (event) {
+      var nextTheme = event.detail && event.detail.theme === 'dark' ? 'dark' : 'light';
+      if (nextTheme !== currentTheme) applyTheme(nextTheme);
+    });
 
     window.addEventListener('resize', function () {
       isMobile = window.innerWidth < 760;

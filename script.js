@@ -83,61 +83,40 @@
   /* ---------- Theme (system-aware + persisted) ---------- */
   function initTheme() {
     var toggle = document.getElementById('themeToggle');
-    var stored = null;
-    try { stored = localStorage.getItem('theme'); } catch (_) {}
-    var sysDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    var theme = stored || (sysDark ? 'dark' : 'light');
-    document.documentElement.setAttribute('data-theme', theme);
-    
-    // Update toggle icon immediately based on current theme
+
+    function getStoredTheme() {
+      try { return localStorage.getItem('theme'); } catch (_) { return null; }
+    }
+
+    function persistTheme(theme) {
+      try { localStorage.setItem('theme', theme); } catch (_) {}
+    }
+
+    function setTheme(theme, persist) {
+      document.documentElement.setAttribute('data-theme', theme);
+      if (persist) persistTheme(theme);
+      window.dispatchEvent(new CustomEvent('bio:themechange', { detail: { theme: theme } }));
+    }
+
+    var themeQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    var stored = getStoredTheme();
+    setTheme(stored || (themeQuery.matches ? 'dark' : 'light'), false);
+
     if (toggle) {
-      var isDark = theme === 'dark';
-      toggle.querySelector('.sun').style.opacity = isDark ? '0' : '1';
-      toggle.querySelector('.sun').style.transform = isDark ? 'rotate(90deg) scale(0)' : 'rotate(0) scale(1)';
-      toggle.querySelector('.moon').style.opacity = isDark ? '1' : '0';
-      toggle.querySelector('.moon').style.transform = isDark ? 'rotate(0) scale(1)' : 'rotate(-90deg) scale(0)';
-      
       toggle.addEventListener('click', function () {
         var next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-        document.documentElement.setAttribute('data-theme', next);
-        try { localStorage.setItem('theme', next); } catch (_) {}
-        
-        // Trigger background animation restart
-        triggerBackgroundAnimation();
+        setTheme(next, true);
       });
 
       // Listen for system theme changes
-      window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function(e) {
-        if (!localStorage.getItem('theme')) { // Only if user hasn't manually set a theme
-          var newTheme = e.matches ? 'dark' : 'light';
-          document.documentElement.setAttribute('data-theme', newTheme);
-
-          // Update toggle icon
-          var isDark = newTheme === 'dark';
-          toggle.querySelector('.sun').style.opacity = isDark ? '0' : '1';
-          toggle.querySelector('.sun').style.transform = isDark ? 'rotate(90deg) scale(0)' : 'rotate(0) scale(1)';
-          toggle.querySelector('.moon').style.opacity = isDark ? '1' : '0';
-          toggle.querySelector('.moon').style.transform = isDark ? 'rotate(0) scale(1)' : 'rotate(-90deg) scale(0)';
-
-          // Trigger background animation restart
-          triggerBackgroundAnimation();
-        }
-      });
+      var onSystemThemeChange = function(e) {
+        if (!getStoredTheme()) setTheme(e.matches ? 'dark' : 'light', false);
+      };
+      if (themeQuery.addEventListener) themeQuery.addEventListener('change', onSystemThemeChange);
+      else if (themeQuery.addListener) themeQuery.addListener(onSystemThemeChange);
     }
   }
-
-  /* Trigger background animation restart */
-  function triggerBackgroundAnimation() {
-    // Force restart the background animation
-    var canvas = document.getElementById('webgl-hero');
-    if (canvas && canvas.classList.contains('ready')) {
-      // Add a brief flash to indicate theme change
-      canvas.style.opacity = '0';
-      setTimeout(function() {
-        canvas.style.opacity = '1';
-      }, 100);
-    }
-  }
+  initTheme();
 
   /* ---------- Accordion reveal helper (height-animated, clip-free when open) ---------- */
   function setReveal(el, open) {
@@ -522,7 +501,6 @@
     if (yr) yr.textContent = String(new Date().getFullYear());
     initSprites();
     bindTilt();
-    initTheme();
     initBio();
     initFilter();
     initReveal();
